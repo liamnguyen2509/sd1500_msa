@@ -19,21 +19,60 @@ pipeline {
                 }
             }
         }
-        stage('Push') {
+        stage('Push FE') {
             steps {
                 script{
-                        docker.withRegistry('https://191627991384.dkr.ecr.ap-southeast-1.amazonaws.com/assigment-backend', 'ecr:ap-southeast-1:aws-credentials') {
-                    app.push("${env.BUILD_NUMBER}")
-                    app.push("latest")
+                        docker.withRegistry('https://191627991384.dkr.ecr.ap-southeast-1.amazonaws.com/assigment-frontend', 'ecr:ap-southeast-1:aws-credentials') {
+                        frontend.push("latest")
                     }
                 }
             }
         }
-        stage('Deploy'){
+
+        stage('Deploy FE'){
             steps {
-                 sh 'kubectl apply -f deployment.yml'
+                 sh 'kubectl apply -f frontend.yaml'
             }
         }
 
+        stage('Build BE') { 
+            steps { 
+                script{
+                 frontend = docker.build("assigment-backend", "-f Dockerfile src/backend")
+                }
+            }
+        }
+        stage('Push BE') {
+            steps {
+                script{
+                        docker.withRegistry('https://191627991384.dkr.ecr.ap-southeast-1.amazonaws.com/assigment-backend', 'ecr:ap-southeast-1:aws-credentials') {
+                        frontend.push("latest")
+                    }
+                }
+            }
+        }
+
+        stage('Deploy BE'){
+            steps {
+                 sh 'kubectl apply -f backend.yaml'
+            }
+        }
+
+        stage('Deploy mongo'){
+            steps {
+                script {
+                    sh 'kubectl apply -f mongodb.yaml'
+                }
+            }
+        }
+
+        stage('Deploy nginx'){
+            steps {
+                 script {
+                    sh 'kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.7.1/deploy/static/provider/cloud/deploy.yaml'
+                    sh 'kubectl apply -f ingress.yml'
+                 }
+            }
+        }
     }
 }
